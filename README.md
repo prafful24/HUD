@@ -2,6 +2,9 @@ HUD
 ===
 
 Arduino Based Heads-Up Display
+
+//Code for HUD
+
 int  d=1000,fuel=60,sp=0,time=0;
 
 void distance()
