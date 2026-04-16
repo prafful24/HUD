@@ -1,129 +1,146 @@
-int  d=1000,fuel=60,sp=0,time=0;
+int distanceRemaining = 1000;
+int fuelLitres = 60;
+int speedKmph = 0;
+int elapsedTicks = 0;
 
-void distance()
-{  
-char p,*I;  
-Serial.println("Enter the distance of travel");
-if(Serial.available()>0)
-      {
-        p=Serial.read();
-        *I=p;
-        d=atoi(I);
-Serial.print(d);
-delay(2000);
-     }
-Serial.println("The distance of travel is");
-Serial.println(d);
-}
-
-voidmilage()
-{
-int m=d/fuel;
-Serial.println("The expected milage is");
-Serial.println(m);
-}
-voidspd()
-{
-sp=random(0,20);
-Serial.println(sp);
-fuel=fuel-2;
-time++;  
-delay(1000);
-
-sp=random(10,25);
-Serial.println(sp);
-fuel=fuel-2;
-time++;  
-delay(1000);
-
-sp=random(20,40);
-Serial.println(sp);
-fuel=fuel-2;
-time++;  
-delay(1000);
-
-sp=random(30,45);
-Serial.println(sp);
-fuel=fuel-2;
-time++;  
-delay(1000);
-}
-
-voidrefil()
-{
-if(fuel<=45)
-  {
-Serial.println(" FUEL LEVEL : LOW DETECTED");
-delay(3500);
-int b=Serial.read();
-if(b==114)
-       {
-while(!Serial.available())
-          {
-Serial.println(" HOW MUCH FUEL TO BE REFILLED..??");
-Serial.println(" Press 'a' for 60 litres");
-Serial.println(" Press 'b' for 55 litres");
-Serial.println(" Press 'c' for 51 litres");
-Serial.println(" Press 'd' for 45 litres");
-delay(4000);
-          }
-int c=Serial.read();
-switch(c)
-         {
-case 97:{Serial.println(" FILLED 60 Ltrs");
-fuel=60;
-delay(2000);
-break;}
-case 98:{Serial.println(" FILLED 55 Ltrs");
-fuel=55;
-delay(2000);
-break;}
-case 99:{Serial.println(" FILLED 51 Ltrs");
-fuel=50;
-delay(2000);
-break;}
-case 100:{Serial.println(" FILLED 45 Ltrs");
-fuel=45;
-delay(2000);
-break;}
-
-        }
-     }
-   }
-}
-void destination()
-{
-
-if(d==0)
-  {
-Serial.println("Destination Reached");
-while(1){}   
-}
-else
-  {
-Serial.println("Keep Driving");
-
-  }
-}
-void setup()
-{
-Serial.begin(9600);
-distance();
-milage();
-}
-void loop()
-{ 
-if(fuel>45)
-  {
-spd();
-  }
-else
-  {
-refil();
+void printMileage() {
+  if (fuelLitres <= 0) {
+    Serial.println("Estimated mileage: unavailable (fuel is 0)");
+    return;
   }
 
-d-=100;
-Serial.println("Distance Remaining to Destination:");
-Serial.println(d);
-milage();
-destination(); }
+  int mileage = distanceRemaining / fuelLitres;
+  Serial.print("Estimated mileage (distance/fuel): ");
+  Serial.println(mileage);
+}
+
+void askDistance() {
+  Serial.println("Enter distance to travel in km (press Enter):");
+
+  while (!Serial.available()) {
+    delay(100);
+  }
+
+  String input = Serial.readStringUntil('\n');
+  input.trim();
+
+  int parsed = input.toInt();
+  if (parsed > 0) {
+    distanceRemaining = parsed;
+  } else {
+    Serial.println("Invalid input. Using default distance: 1000 km");
+  }
+
+  Serial.print("Distance to travel: ");
+  Serial.println(distanceRemaining);
+}
+
+void runSpeedCycle() {
+  const int minSpeeds[4] = {0, 10, 20, 30};
+  const int maxSpeeds[4] = {20, 25, 40, 45};
+
+  for (int i = 0; i < 4; i++) {
+    speedKmph = random(minSpeeds[i], maxSpeeds[i]);
+    Serial.print("Current speed: ");
+    Serial.println(speedKmph);
+
+    fuelLitres -= 2;
+    if (fuelLitres < 0) {
+      fuelLitres = 0;
+    }
+
+    elapsedTicks++;
+    delay(1000);
+  }
+}
+
+void refillFuelIfNeeded() {
+  if (fuelLitres > 45) {
+    return;
+  }
+
+  Serial.println("FUEL LEVEL LOW.");
+  Serial.println("Press 'r' to refill, or any other key to continue.");
+
+  while (!Serial.available()) {
+    delay(100);
+  }
+
+  int refillIntent = Serial.read();
+  if (refillIntent != 'r' && refillIntent != 'R') {
+    return;
+  }
+
+  Serial.println("How much fuel to refill?");
+  Serial.println("a -> 60 litres");
+  Serial.println("b -> 55 litres");
+  Serial.println("c -> 50 litres");
+  Serial.println("d -> 45 litres");
+
+  while (!Serial.available()) {
+    delay(100);
+  }
+
+  int option = Serial.read();
+  switch (option) {
+    case 'a':
+      fuelLitres = 60;
+      Serial.println("Filled to 60 litres.");
+      break;
+    case 'b':
+      fuelLitres = 55;
+      Serial.println("Filled to 55 litres.");
+      break;
+    case 'c':
+      fuelLitres = 50;
+      Serial.println("Filled to 50 litres.");
+      break;
+    case 'd':
+      fuelLitres = 45;
+      Serial.println("Filled to 45 litres.");
+      break;
+    default:
+      Serial.println("Unknown choice. Fuel unchanged.");
+      break;
+  }
+}
+
+void checkDestination() {
+  if (distanceRemaining <= 0) {
+    Serial.println("Destination reached.");
+    while (true) {
+      delay(1000);
+    }
+  }
+
+  Serial.println("Keep driving...");
+}
+
+void setup() {
+  Serial.begin(9600);
+  randomSeed(analogRead(A0));
+
+  askDistance();
+  printMileage();
+}
+
+void loop() {
+  if (fuelLitres > 45) {
+    runSpeedCycle();
+  } else {
+    refillFuelIfNeeded();
+  }
+
+  distanceRemaining -= 100;
+  if (distanceRemaining < 0) {
+    distanceRemaining = 0;
+  }
+
+  Serial.print("Distance remaining to destination: ");
+  Serial.println(distanceRemaining);
+  Serial.print("Fuel remaining: ");
+  Serial.println(fuelLitres);
+
+  printMileage();
+  checkDestination();
+}
